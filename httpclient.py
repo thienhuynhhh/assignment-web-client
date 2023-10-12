@@ -41,13 +41,20 @@ class HTTPClient(object):
         return None
 
     def get_code(self, data):
-        return None
+     # Extract the first line of the response, which is the status line
+        status_line= data.split('\r\n')
+        # Split the status line into parts and extract the status code
+        status_code = status_line[0].split(' ')
+        return status_code[1]
 
     def get_headers(self,data):
-        return None
+        status_line= data.split("\r\n\r\n") #separate (header) and body
+   
+        return status_line[0]     #extract header
 
     def get_body(self, data):
-        return None
+        status_line= data.split("\r\n\r\n")
+        return status_line[1]
     
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -61,6 +68,7 @@ class HTTPClient(object):
         done = False
         while not done:
             part = sock.recv(1024)
+            print(part.decode('utf-8')+"hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
             if (part):
                 buffer.extend(part)
             else:
@@ -70,6 +78,28 @@ class HTTPClient(object):
     def GET(self, url, args=None):
         code = 500
         body = ""
+        host=urllib.parse.urlparse(url).hostname #get host from url
+        port=urllib.parse.urlparse(url).port     #get port from url
+        path=urllib.parse.urlparse(url).path   
+
+        if port is None:
+            if urllib.parse.urlparse(url).scheme=="http":
+                port=80
+            elif urllib.parse.urlparse(url).scheme=="https":
+                port=443
+        request="GET "+path+" HTTP/1.1\r\nHost: "+host+"\r\n\r\n"
+        #print(request+"***************************************************************")
+        self.connect(host,port)
+        self.sendall(request)
+        self.socket.shutdown(socket.SHUT_WR)
+
+        response=self.recvall(self.socket)
+        self.close()
+        print("*******************************************************************start reponse")
+        print(host+"*******************************************************************path")
+        print(response+"\r***************************************************************end reponse")
+        code=int(self.get_code(response))
+        body=self.get_body(response)
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
